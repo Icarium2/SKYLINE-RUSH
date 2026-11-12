@@ -114,8 +114,12 @@ function tick() {
       sfx.play('coin');
     }
     if (res.power) {
-      if (res.power === 'spring') player.superJumpTimer = 8;
-      else player.boulderCharges = 3;
+      // Picking up a duplicate extends what you already have.
+      if (res.power === 'spring') {
+        player.superJumpTimer = Math.max(0, player.superJumpTimer) + 8;
+      } else {
+        player.boulderCharges += 3;
+      }
       sfx.powerup();
     }
     if (res.hit) {

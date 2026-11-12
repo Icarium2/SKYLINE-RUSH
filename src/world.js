@@ -128,13 +128,60 @@ function makeConeRow() {
   return g;
 }
 
-// Power-up pickups.
+// Power-up pickups. Emissive materials + an additive halo sprite make them
+// read instantly as "good things" against the matte world.
 const coilRingGeo = new THREE.TorusGeometry(0.32, 0.07, 8, 16);
 const coilCapGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.09, 16);
-const coilMat = new THREE.MeshLambertMaterial({ color: 0x29c7e8 });
-const coilCapMat = new THREE.MeshLambertMaterial({ color: 0xff6b6b });
+const coilMat = new THREE.MeshLambertMaterial({
+  color: 0x29c7e8,
+  emissive: 0x0e7a92,
+  emissiveIntensity: 0.8,
+});
+const coilCapMat = new THREE.MeshLambertMaterial({
+  color: 0xff6b6b,
+  emissive: 0x6e1f1f,
+  emissiveIntensity: 0.6,
+});
 const boulderGeo = new THREE.IcosahedronGeometry(0.48, 0);
-const boulderMat = new THREE.MeshLambertMaterial({ color: 0x8a7f72, flatShading: true });
+const boulderMat = new THREE.MeshLambertMaterial({
+  color: 0x8a7f72,
+  emissive: 0x3d3121,
+  emissiveIntensity: 0.6,
+  flatShading: true,
+});
+
+let haloTexture = null;
+function getHaloTexture() {
+  if (haloTexture) return haloTexture;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(255,255,255,0.85)');
+  grad.addColorStop(0.35, 'rgba(255,255,255,0.3)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 128);
+  haloTexture = new THREE.CanvasTexture(c);
+  return haloTexture;
+}
+
+function addGlow(group, color, scale, y) {
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: getHaloTexture(),
+      color,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  );
+  sprite.scale.setScalar(scale);
+  sprite.position.y = y;
+  sprite.userData.baseScale = scale;
+  group.add(sprite);
+  group.userData.halo = sprite;
+}
 
 function makeSpringPickup() {
   const g = new THREE.Group();
@@ -152,6 +199,7 @@ function makeSpringPickup() {
   g.traverse((o) => {
     if (o.isMesh) o.castShadow = true;
   });
+  addGlow(g, 0x55e6ff, 2.4, 0.35);
   return g;
 }
 
@@ -163,6 +211,7 @@ function makeBoulderPickup() {
   chip.position.set(0.38, -0.2, 0.1);
   chip.castShadow = true;
   g.add(rock, chip);
+  addGlow(g, 0xffc94d, 2.6, 0);
   return g;
 }
 
@@ -659,6 +708,7 @@ export class World {
 
     for (const c of this.chunks) {
       c.group.position.z += dz;
+      const gz = c.group.position.z;
       for (const coin of c.coins) {
         if (!coin.taken) coin.mesh.rotation.y += dt * 4;
       }
@@ -666,6 +716,12 @@ export class World {
         if (!p.taken) {
           p.mesh.rotation.y += dt * 2.5;
           p.mesh.position.y = 1.0 + Math.sin(this.time * 2.5 + p.z) * 0.15;
+          const halo = p.mesh.userData.halo;
+          if (halo) {
+            halo.scale.setScalar(
+              halo.userData.baseScale * (1 + 0.12 * Math.sin(this.time * 3.5 + p.z))
+            );
+          }
         }
       }
       for (const s of c.swayers) {
@@ -673,11 +729,24 @@ export class World {
       }
       for (const o of c.obstacles) {
         if (o.speed) {
-          // Oncoming vehicles creep toward the player within their chunk.
-          o.z += o.speed * dt;
+          // Oncoming vehicles creep toward the player, but brake when they
+          // reach the back of a ramp in their lane instead of clipping through.
+          let step = o.speed * dt;
+          const frontWorld = gz + o.z + o.half.z;
+          for (const c2 of this.chunks) {
+            const g2 = c2.group.position.z;
+            for (const r of c2.ramps) {
+              if (Math.abs(r.laneX - o.x) > 1.6) continue;
+              const backEdge = g2 + r.zNear - RAMP_LEN - 0.2;
+              const gap = backEdge - frontWorld;
+              if (gap >= 0) step = Math.min(step, gap);
+              else if (gap > -(RAMP_LEN + 2 * o.half.z)) step = 0; // at the ramp
+            }
+          }
+          o.z += step;
           o.obj.position.z = o.z;
-          const spin = (this.speed + o.speed) * dt * 0.9;
-          for (const w of o.obj.userData.wheels) w.rotation.x -= spin;
+          // Wheels turn with the vehicle's actual movement; parked = still.
+          for (const w of o.obj.userData.wheels) w.rotation.x -= step * 2.5;
         } else if (o.bob) {
           o.obj.position.y = o.baseY + Math.sin(this.time * 3 + o.phase) * 0.15;
         }
