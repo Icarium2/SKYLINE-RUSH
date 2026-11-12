@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Skyline Rush</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>"
+    />
+    <style>
+      :root {
+        --ink: #1d3557;
+        --pop: #ff6b6b;
+        --gold: #ffd166;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        height: 100%;
+        background: #87ceeb;
+        font-family: 'Avenir Next', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+        user-select: none;
+      }
+      #app {
+        width: 100%;
+        height: 100%;
+      }
+      canvas {
+        display: block;
+      }
+      .hidden {
+        display: none !important;
+      }
+
+      #hud {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        right: 16px;
+        display: flex;
+        justify-content: space-between;
+        pointer-events: none;
+      }
+      .chip {
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--ink);
+        font-weight: 800;
+        font-size: 22px;
+        padding: 8px 18px;
+        border-radius: 999px;
+        box-shadow: 0 4px 0 rgba(29, 53, 87, 0.25);
+      }
+      .chip .label {
+        font-size: 13px;
+        font-weight: 700;
+        opacity: 0.55;
+        margin-right: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      #coins {
+        color: #b8860b;
+      }
+
+      .overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        background: rgba(29, 53, 87, 0.35);
+        backdrop-filter: blur(3px);
+        color: #fff;
+        text-align: center;
+        padding: 0 16px;
+      }
+      .overlay h1 {
+        font-size: clamp(44px, 9vw, 84px);
+        margin: 0;
+        letter-spacing: 0.02em;
+        color: var(--gold);
+        text-shadow: 0 5px 0 rgba(29, 53, 87, 0.6);
+      }
+      .overlay h2 {
+        font-size: clamp(32px, 6vw, 56px);
+        margin: 0;
+        color: var(--pop);
+        text-shadow: 0 4px 0 rgba(29, 53, 87, 0.6);
+      }
+      .overlay p {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 4px 0;
+        max-width: 420px;
+      }
+      .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 4px;
+      }
+      .key {
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--ink);
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-weight: 800;
+        font-size: 14px;
+        box-shadow: 0 3px 0 rgba(29, 53, 87, 0.3);
+      }
+      .pulse {
+        animation: pulse 1.2s ease-in-out infinite;
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--gold);
+      }
+      @keyframes pulse {
+        50% {
+          opacity: 0.45;
+        }
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-DN8MCkWV.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <div id="hud" class="hidden">
+      <div class="chip"><span class="label">Score</span><span id="score">0</span></div>
+      <div class="chip hidden"><span class="label">Power</span><span id="power"></span></div>
+      <div class="chip"><span class="label">Coins</span><span id="coins">0</span></div>
+    </div>
+
+    <div id="overlay-loading" class="overlay"><p class="pulse">Loading models…</p></div>
+
+    <div id="overlay-start" class="overlay hidden">
+      <h1>Skyline Rush</h1>
+      <div class="controls">
+        <span class="key">◀ / A — left</span>
+        <span class="key">▶ / D — right</span>
+        <span class="key">▲ / W / Space — jump</span>
+        <span class="key">▼ / S — slide</span>
+      </div>
+      <p>Dodge the traffic, slide under gates, hit the ramps, grab the coins!</p>
+      <p class="pulse">Press any key to run</p>
+    </div>
+
+    <div id="overlay-over" class="overlay hidden">
+      <h2>Wipeout!</h2>
+      <p id="final-score"></p>
+      <p class="pulse">Press any key to run again</p>
+    </div>
+
+  </body>
+</html>
